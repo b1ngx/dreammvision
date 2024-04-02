@@ -46,6 +46,9 @@ const nextAuth = NextAuth({
               headers: { 'Content-Type': 'application/json' },
               method: 'POST',
             });
+
+            if (!res.ok) return null;
+
             const { success, data: user } = await res.json();
 
             // If no error and we have user data, return it
