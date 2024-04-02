@@ -34,27 +34,27 @@ const nextAuth = NextAuth({
   providers: ENABLE_OAUTH_SSO
     ? [
         CredentialsProvider({
-          async authorize() {
+          async authorize(credentials) {
             // You need to provide your own logic here that takes the credentials
             // submitted and returns either a object representing a user or value
             // that is false/null if the credentials are invalid.
             // e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
             // You can also use the `req` object to obtain additional parameters
             // (i.e., the request IP address)
-            // const res = await fetch('https://www.dreammvision.com:9000/api/user/login', {
-            //   body: JSON.stringify(credentials),
-            //   headers: { 'Content-Type': 'application/json' },
-            //   method: 'POST',
-            // });
+            const res = await fetch('http://101.43.129.119:3000/api/user/login', {
+              body: JSON.stringify(credentials),
+              headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
+            });
 
-            // if (!res.ok) return null;
+            if (!res.ok) return null;
 
-            // const { success, data: user } = await res.json();
+            const { success, data: user } = await res.json();
 
             // If no error and we have user data, return it
-            // if (res.ok && success) {
-            //   return { ...user, name: user.display_name };
-            // }
+            if (res.ok && success) {
+              return { ...user, name: user.display_name };
+            }
             // Return null if user data could not be retrieved
             return { id: '1', name: 'ai' };
           },
