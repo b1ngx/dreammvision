@@ -1,24 +1,9 @@
 import NextAuth from 'next-auth';
-import Auth0 from 'next-auth/providers/auth0';
-import Authentik from 'next-auth/providers/authentik';
-import AzureAd from 'next-auth/providers/azure-ad';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
 import { getServerConfig } from '@/config/server';
 
-const {
-  ENABLE_OAUTH_SSO,
-  SSO_PROVIDERS,
-  AUTH0_CLIENT_ID,
-  AUTH0_CLIENT_SECRET,
-  AUTH0_ISSUER,
-  AZURE_AD_CLIENT_ID,
-  AZURE_AD_CLIENT_SECRET,
-  AZURE_AD_TENANT_ID,
-  AUTHENTIK_CLIENT_ID,
-  AUTHENTIK_CLIENT_SECRET,
-  AUTHENTIK_ISSUER,
-  NEXTAUTH_SECRET,
-} = getServerConfig();
+const { ENABLE_OAUTH_SSO, NEXTAUTH_SECRET } = getServerConfig();
 
 declare module '@auth/core/jwt' {
   // Returned by the `jwt` callback and `auth`, when using JWT sessions
@@ -47,43 +32,42 @@ const nextAuth = NextAuth({
     },
   },
   providers: ENABLE_OAUTH_SSO
-    ? SSO_PROVIDERS.split(/[,，]/).map((provider) => {
-        switch (provider) {
-          case 'auth0': {
-            return Auth0({
-              // Specify auth scope, at least include 'openid email'
-              // all scopes in Auth0 ref: https://auth0.com/docs/get-started/apis/scopes/openid-connect-scopes#standard-claims
-              authorization: { params: { scope: 'openid email profile' } },
-              clientId: AUTH0_CLIENT_ID,
-              clientSecret: AUTH0_CLIENT_SECRET,
-              issuer: AUTH0_ISSUER,
+    ? [
+        CredentialsProvider({
+          async authorize(credentials) {
+            // You need to provide your own logic here that takes the credentials
+            // submitted and returns either a object representing a user or value
+            // that is false/null if the credentials are invalid.
+            // e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
+            // You can also use the `req` object to obtain additional parameters
+            // (i.e., the request IP address)
+            const res = await fetch('https://www.dreammvision.com:9000/api/user/login', {
+              body: JSON.stringify(credentials),
+              headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
             });
-          }
-          case 'azure-ad': {
-            return AzureAd({
-              // Specify auth scope, at least include 'openid email'
-              // all scopes in Azure AD ref: https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc#openid-connect-scopes
-              authorization: { params: { scope: 'openid email profile' } },
-              clientId: AZURE_AD_CLIENT_ID,
-              clientSecret: AZURE_AD_CLIENT_SECRET,
-              tenantId: AZURE_AD_TENANT_ID,
-            });
-          }
-          case 'authentik': {
-            return Authentik({
-              // Specify auth scope, at least include 'openid email'
-              // all scopes in Authentik ref: https://goauthentik.io/docs/providers/oauth2
-              authorization: { params: { scope: 'openid email profile' } },
-              clientId: AUTHENTIK_CLIENT_ID,
-              clientSecret: AUTHENTIK_CLIENT_SECRET,
-              issuer: AUTHENTIK_ISSUER,
-            });
-          }
-          default: {
-            throw new Error(`[NextAuth] provider ${provider} is not supported`);
-          }
-        }
-      })
+            const { success, data: user } = await res.json();
+
+            // If no error and we have user data, return it
+            if (res.ok && success) {
+              return { ...user, name: user.display_name };
+            }
+            // Return null if user data could not be retrieved
+            return null;
+          },
+          // The credentials is used to generate a suitable form on the sign in page.
+          // You can specify whatever fields you are expecting to be submitted.
+          // e.g. domain, username, password, 2FA token, etc.
+          // You can pass any HTML attribute to the <input> tag through the object.
+          credentials: {
+            username: { label: '用户名', type: 'text' },
+            // eslint-disable-next-line sort-keys-fix/sort-keys-fix
+            password: { label: '密码', type: 'password' },
+          },
+          // The name to display on the sign in form (e.g. 'Sign in with...')
+          name: 'Credentials',
+        }),
+      ]
     : [],
   secret: NEXTAUTH_SECRET,
   trustHost: true,
