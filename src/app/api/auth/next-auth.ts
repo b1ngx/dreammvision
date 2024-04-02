@@ -41,11 +41,16 @@ const nextAuth = NextAuth({
             // e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
             // You can also use the `req` object to obtain additional parameters
             // (i.e., the request IP address)
+
+            console.log('credentials', credentials);
+
             const res = await fetch('http://101.43.129.119:3000/api/user/login', {
               body: JSON.stringify(credentials),
               headers: { 'Content-Type': 'application/json' },
               method: 'POST',
             });
+
+            console.log('ok', res.ok);
 
             if (!res.ok) return null;
 
